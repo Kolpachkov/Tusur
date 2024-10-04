@@ -28,12 +28,12 @@ def parallel_processing(matrix, num_threads):
     global column_sum
     global processed_columns
 
-    column_sum = 0  # Сбрасываем результат
-    processed_columns = np.zeros(matrix.shape[1], dtype=bool)  # Инициализируем массив для отслеживания
+    column_sum = 0  
+    processed_columns = np.zeros(matrix.shape[1], dtype=bool)  
 
-    # Определим подматрицы для каждого потока (по строкам)
+    
     row_chunks = np.array_split(matrix, num_threads, axis=0)
-    col_indices = np.arange(matrix.shape[1])  # Индексы всех столбцов
+    col_indices = np.arange(matrix.shape[1])  
     
     threads = []
     for submatrix in row_chunks:
@@ -45,13 +45,11 @@ def parallel_processing(matrix, num_threads):
         t.join()
 
 def sequential_processing(matrix):
-    # Поиск столбцов с хотя бы одним нулем
     cols_with_zeros = np.any(matrix == 0, axis=0).nonzero()[0]
     
     return sum(cols_with_zeros)
 
 def benchmark(matrix_size, num_threads):
-    # Создаем случайную матрицу целочисленного типа (однобайтные значения)
     matrix = np.random.randint(0, 127, size=(matrix_size, matrix_size), dtype=np.byte)
     
     
