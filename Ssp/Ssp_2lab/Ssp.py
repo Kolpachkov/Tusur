@@ -75,6 +75,7 @@ parallel_times = []
 
 for size in matrix_sizes:
     seq_time, par_time = benchmark(size, 4)
+
     sequential_times.append(seq_time)
     parallel_times.append(par_time)
     if (seq_time > par_time and first ==True):
@@ -156,11 +157,12 @@ def benchmark(matrix_size, num_threads):
     start_time = time.time()
     parallel_processing(matrix, num_threads)
     parallel_time = time.time() - start_time
-
+    parallel_speed = (matrix_size*matrix_size)/parallel_time
+    sequential_speed = (matrix_size*matrix_size)/sequential_time
     # Проверка на совпадение результатов
     assert column_sum == sequential_result, f"Результаты не совпадают! {column_sum} != {sequential_result}"
 
-    return sequential_time, parallel_time
+    return sequential_speed, parallel_speed
 
 # Построение графика
 matrix_sizes = [10,20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000]
