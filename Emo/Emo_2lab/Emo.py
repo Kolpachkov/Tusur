@@ -2,11 +2,11 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 
-L = 16  
+L = 16 
 
 
 def target_function(x):
-    return x**4 - 10*x**3 + 36*x**2 + 5*x
+    return -(1/4) * x**4 + x**2 - 8 * x + 12 
 
 def decode(binary_string, a, b):
     r = (2**L - 1)  
@@ -18,7 +18,7 @@ def fitness(binary_string, a, b):
     x = decode(binary_string, a, b)
     return target_function(x)
 
-# Отбор лучших особей
+
 def selection(population, a, b):
     return sorted(population, key=lambda ind: fitness(ind, a, b))[:2]
 
