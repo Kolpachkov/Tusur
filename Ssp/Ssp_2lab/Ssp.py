@@ -59,6 +59,9 @@ def benchmark(matrix_size, num_threads):
 
     
     assert column_sum == sequential_result, f"Результаты не совпадают! {column_sum} != {sequential_result}"
+    if parallel_time == 0 or sequential_time == 0: 
+        parallel_time = 0.0001
+        sequential_time = 0.0001
 
     parallel_speed = (matrix_size * matrix_size) / parallel_time
     sequential_speed = (matrix_size * matrix_size) / sequential_time
@@ -66,7 +69,7 @@ def benchmark(matrix_size, num_threads):
     return sequential_speed, parallel_speed
 
 
-matrix_sizes = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000,20000,30000]
+matrix_sizes = [ 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000,20000,30000]
 sequential_speeds = []
 parallel_speeds = []
 

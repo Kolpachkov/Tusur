@@ -27,14 +27,14 @@ class StaticArrayQueue(Queue):
 
     def enqueue(self, value):
         if self.count == self.size:
-            raise OverflowError("Queue is full")
+            raise OverflowError("Очередь полная")
         self.queue[self.rear] = value
         self.rear = (self.rear + 1) % self.size
         self.count += 1
 
     def dequeue(self):
         if self.is_empty():
-            raise IndexError("Queue is empty")
+            raise IndexError("Очередь пустая")
         value = self.queue[self.front]
         self.front = (self.front + 1) % self.size
         self.count -= 1
@@ -45,9 +45,9 @@ class StaticArrayQueue(Queue):
 
     def display(self):
         if self.is_empty():
-            print("Queue is empty")
+            print("Очередь пустая")
         else:
-            print("Queue:", end=" ")
+            print("Очередь:", end=" ")
             for i in range(self.count):
                 print(self.queue[(self.front + i) % self.size], end=" ")
             print()
@@ -69,7 +69,7 @@ class DynamicArrayQueue(Queue):
 
     def dequeue(self):
         if self.is_empty():
-            raise IndexError("Queue is empty")
+            raise IndexError("Очередь пустая")
         value = self.queue[self.front]
         self.front = (self.front + 1) % self.size
         self.count -= 1
@@ -89,30 +89,56 @@ class DynamicArrayQueue(Queue):
 
     def display(self):
         if self.is_empty():
-            print("Queue is empty")
+            print("Очередь пустая")
         else:
-            print("Queue:", end=" ")
+            print("Очередь:", end=" ")
             for i in range(self.count):
                 print(self.queue[(self.front + i) % self.size], end=" ")
             print()
 
+def user_select_queue():
+    print("Выберите тип очереди:")
+    print("1. Статическая очередь")
+    print("2. Динамическая очередь")
+    choice = input("Введите номер вашего выбора: ")
+    
+    size = int(input("Введите размер очереди: "))
+    
+    match choice:
+        case "1":
+            return StaticArrayQueue(size)
+        case "2":
+            return DynamicArrayQueue(size)
+        case _:
+            print("Неверный выбор, создается очередь по умолчанию (динамическая).")
+            return DynamicArrayQueue(size)
+
 
 if __name__ == "__main__":
-    static_queue = StaticArrayQueue(3)
-    dynamic_queue = DynamicArrayQueue(3)
+    queue = user_select_queue()
 
-    print("StaticArrayQueue:")
-    static_queue.enqueue(1)
-    static_queue.enqueue(2)
-    static_queue.display()  
-    print(static_queue.dequeue())
-    static_queue.display()  
-
-    print("\nDynamicArrayQueue:")
-    dynamic_queue.enqueue(10)
-    dynamic_queue.enqueue(20)
-    dynamic_queue.enqueue(30)
-    dynamic_queue.enqueue(40)  
-    dynamic_queue.display()  
-    print(dynamic_queue.dequeue())
-    dynamic_queue.display()  
+    while True:
+        print("\n1. Добавить элемент в очередь")
+        print("2. Удалить элемент из очереди")
+        print("3. Показать очередь")
+        print("4. Выход")
+        action = input("Выберите действие: ")
+        
+        match action:
+            case "1":
+                value = int(input("Введите элемент для добавления: "))
+                try:
+                    queue.enqueue(value)
+                except OverflowError as e:
+                    print(e)
+            case "2":
+                try:
+                    print("Удалён элемент:", queue.dequeue())
+                except IndexError as e:
+                    print(e)
+            case "3":
+                queue.display()
+            case "4":
+                break
+            case _:
+                print("Неверный выбор, попробуйте снова.")
