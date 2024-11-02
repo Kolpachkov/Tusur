@@ -13,7 +13,7 @@ def target_function(x):
 def binary_to_gray(binary_string):
     binary_value = int(binary_string, 2)
     gray_value = binary_value ^ (binary_value >> 1)
-    return f'{gray_value:0{L}b}'  # Возвращаем строку длиной L в коде Грея
+    return f'{gray_value:0{L}b}'  
 
 
 def gray_to_binary(gray_string):
@@ -59,10 +59,9 @@ def mutate(child):
 
 
 def genetic_algorithm(a, b, K, N, epsilon):
-    # Инициализация популяции с кодом Грея
+   
     population = [binary_to_gray(''.join(random.choice('01') for _ in range(L))) for _ in range(K)]
 
-    # Запоминаем начальную популяцию
     initial_population = population.copy()
 
     best_values = []
@@ -93,34 +92,33 @@ def genetic_algorithm(a, b, K, N, epsilon):
 
 
 def save_to_csv(a, b, K, N, epsilon, initial_population, best_x, best_f):
-    # Проверка существования файла для добавления заголовка
+   
     file_exists = os.path.isfile('genetic_algorithm_results.csv')
 
-    # Запись в CSV файл
+    
     with open('genetic_algorithm_results.csv', mode='a', newline='') as file:
         writer = csv.writer(file)
 
-        # Добавление заголовков, если файл только создан
+        
         if not file_exists:
             writer.writerow(['a', 'b', 'K', 'N', 'epsilon', 'Best x', 'Best f(x)', 'Initial Population'])
 
         writer.writerow([a, b, K, N, epsilon, best_x, best_f, initial_population])
 
 
-# Постоянные параметры
+
 a = -7
 b = 7
-N = 500
+N = 10
 epsilon = 0.001
 
-# Массив значений для K с шагом 4, начиная с 2
-K_values = range(2, 30, 4)
 
-# Запуск алгоритма для каждого значения K
+K_values = range(4, 30, 4)
+
 for K in K_values:
     best_x, best_f, best_values, initial_population = genetic_algorithm(a, b, K, N, epsilon)
 
-    # Запись результатов в файл CSV
+    
     save_to_csv(a, b, K, N, epsilon, initial_population, best_x, best_f)
 
     print(f"Лучшее решение для K = {K}: x = {best_x}, f(x) = {best_f}")
