@@ -1,4 +1,5 @@
 import random
+import matplotlib.pyplot as plt
 import numpy as np
 import csv
 import os
@@ -59,9 +60,10 @@ def mutate(child):
 
 
 def genetic_algorithm(a, b, K, N, epsilon):
-   
+    
     population = [binary_to_gray(''.join(random.choice('01') for _ in range(L))) for _ in range(K)]
 
+   
     initial_population = population.copy()
 
     best_values = []
@@ -92,10 +94,10 @@ def genetic_algorithm(a, b, K, N, epsilon):
 
 
 def save_to_csv(a, b, K, N, epsilon, initial_population, best_x, best_f):
-   
+    
     file_exists = os.path.isfile('genetic_algorithm_results.csv')
 
-    
+   
     with open('genetic_algorithm_results.csv', mode='a', newline='') as file:
         writer = csv.writer(file)
 
@@ -106,19 +108,33 @@ def save_to_csv(a, b, K, N, epsilon, initial_population, best_x, best_f):
         writer.writerow([a, b, K, N, epsilon, best_x, best_f, initial_population])
 
 
+def plot_function(a, b):
+    x = np.linspace(a, b, 400)
+    y = target_function(x)
+    plt.plot(x, y, label="f(x)")
+    plt.title("Целевая функция")
+    plt.xlabel("x")
+    plt.ylabel("f(x)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
 
-a = -7
-b = 7
-N = 10
-epsilon = 0.001
 
 
-K_values = range(4, 30, 4)
+a = -7  
+b = 7  
+K = 20  
+N = 15  
+epsilon = 0.001  
 
-for K in K_values:
-    best_x, best_f, best_values, initial_population = genetic_algorithm(a, b, K, N, epsilon)
 
-    
-    save_to_csv(a, b, K, N, epsilon, initial_population, best_x, best_f)
+best_x, best_f, best_values, initial_population = genetic_algorithm(a, b, K, N, epsilon)
 
-    print(f"Лучшее решение для K = {K}: x = {best_x}, f(x) = {best_f}")
+
+save_to_csv(a, b, K, N, epsilon, initial_population, best_x, best_f)
+
+print(f"Лучшее решение: x = {best_x}, f(x) = {best_f}")
+
+
+plt.scatter(best_x, best_f, color='red', label=f"Точка минимума({best_x}, {best_f})")
+plot_function(a, b)

@@ -1,10 +1,8 @@
 import random
 import matplotlib.pyplot as plt
 import numpy as np
-import csv
-import os
-L = 16 
 
+L = 16 
 
 def target_function(x):
     return   x**4 - 10*(x**3) +36 * x**2 + 5 * x 
@@ -14,22 +12,18 @@ def decode(binary_string, a, b):
     value = int(binary_string, 2)  
     return a + (b - a) * value / r  
 
-
 def fitness(binary_string, a, b):
     x = decode(binary_string, a, b)
     return target_function(x)
 
-
 def selection(population, a, b):
     return sorted(population, key=lambda ind: fitness(ind, a, b))[:2]
-
 
 def crossover(parent1, parent2):
     point = random.randint(1, L - 1)
     child1 = parent1[:point] + parent2[point:]
     child2 = parent2[:point] + parent1[point:]
     return child1, child2
-
 
 def mutate(child):
     mutation_prob = 1 / L  # Вероятность мутации
@@ -39,11 +33,9 @@ def mutate(child):
             child_list[i] = '1' if child_list[i] == '0' else '0'
     return ''.join(child_list)
 
-
 def genetic_algorithm(a, b, K, N, epsilon):
     population = [''.join(random.choice('01') for _ in range(L)) for _ in range(K)]
     best_values = []
-    initial_population = population.copy()
 
     for generation in range(N):
         best_individuals = selection(population, a, b)
@@ -67,35 +59,27 @@ def genetic_algorithm(a, b, K, N, epsilon):
         if abs(best_value) <= epsilon:
             break
 
-    return best_real_value, best_value, best_values, initial_population
+    return best_real_value, best_value, best_values
 
-def save_to_csv(a, b, K, N, epsilon, initial_population, best_x, best_f):
-    # Проверка существования файла для добавления заголовка
-    file_exists = os.path.isfile('genetic_algorithm_bin_results.csv')
+def plot_function(a, b):
+    x = np.linspace(a, b, 400)
+    y = target_function(x)
+    plt.plot(x, y, label="f(x)")
+    plt.title("Целевая функция")
+    plt.xlabel("x")
+    plt.ylabel("f(x)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
 
-    # Запись в CSV файл
-    with open('genetic_algorithm_bin_results.csv', mode='a', newline='') as file:
-        writer = csv.writer(file)
+a = -7  
+b = 7  
+K = 10  
+N = 15 
+epsilon = 0.001  
 
-        # Добавление заголовков, если файл только создан
-        if not file_exists:
-            writer.writerow(['a', 'b', 'K', 'N', 'epsilon', 'Best x', 'Best f(x)', 'Initial Population'])
+best_x, best_f, best_values = genetic_algorithm(a, b, K, N, epsilon)
+print(f"Лучшее решение: x = {best_x}, f(x) = {best_f}")
 
-        writer.writerow([a, b, K, N, epsilon, best_x, best_f, initial_population])
-
-a = -7
-b = 7
-N = 500
-epsilon = 0.001
-
-# Массив значений для K с шагом 4, начиная с 2
-K_values = range(2, 30, 4)
-
-# Запуск алгоритма для каждого значения K
-for K in K_values:
-    best_x, best_f, best_values, initial_population = genetic_algorithm(a, b, K, N, epsilon)
-
-    # Запись результатов в файл CSV
-    save_to_csv(a, b, K, N, epsilon, initial_population, best_x, best_f)
-
-    print(f"Лучшее решение для K = {K}: x = {best_x}, f(x) = {best_f}")
+plt.scatter(best_x, best_f, color='red', label=f"Точка минимума({best_x}, {best_f})")
+plot_function(a, b)
