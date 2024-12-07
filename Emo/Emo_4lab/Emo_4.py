@@ -3,9 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import csv
 import os
+import math
 
 def target_function(x):
-    return x**4 - 10 * (x**3) + 36 * x**2 + 5 * x
+   #return x**4 - 10 * (x**3) + 36 * x**2 + 5 * x
+    #return math.log(1+ x**2) -math.sin(x)
+    return 5 - 24 * x + 17 * x**2 - (11/3 * x**3) + (1/4 * x**4)
 
 
 def decode(real_value, a, b):
@@ -22,6 +25,7 @@ def selection(population, a, b):
 
 
 def crossover(parent1, parent2):
+    alpha = random.uniform(0, 1)  
     child1 = alpha * parent1 + (1 - alpha) * parent2
     child2 = (1 - alpha) * parent1 + alpha * parent2
     return child1, child2
@@ -87,17 +91,16 @@ def plot_function(a, b):
     plt.show()
 
 
-a = -7  
-b = 7  
+a = -10  
+b = 10  
 K = 50  
 N = 500 
-alpha = 1
 beta = 0.5
 epsilon = 0.001  
 
 best_x, best_f, best_values, initial_population = genetic_algorithm(a, b, K, N, epsilon)
 
-save_to_csv(a, b, K, N, epsilon, initial_population, best_x, best_f)
+
 
 print(f"Лучшее решение: x = {best_x}, f(x) = {best_f}")
 

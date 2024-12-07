@@ -13,7 +13,8 @@ def generate_population(size, dimensions, bounds):
     return [[random.uniform(bounds[i][0], bounds[i][1]) for i in range(dimensions)] for _ in range(size)]
 
 
-def crossover(parent1, parent2, alpha):
+def crossover(parent1, parent2):
+    alpha = random.uniform(0, 1)
     return [(alpha * x1 + (1 - alpha) * x2) for x1, x2 in zip(parent1, parent2)]
 
 
@@ -24,7 +25,7 @@ def mutate(individual, beta, mutation_rate, bounds):
             individual[i] = max(min(individual[i], bounds[i][1]), bounds[i][0])
     return individual
 
-def genetic_algorithm(target_function, bounds, population_size, generations, alpha, beta, epsilon):
+def genetic_algorithm(target_function, bounds, population_size, generations, beta, epsilon):
     dimensions = len(bounds)
     population = generate_population(population_size, dimensions, bounds)
     history = []  
@@ -45,7 +46,7 @@ def genetic_algorithm(target_function, bounds, population_size, generations, alp
         new_population = population[:population_size // 2]  
         while len(new_population) < population_size:
             parents = random.sample(population[:population_size // 2], 2)
-            child = crossover(parents[0], parents[1], alpha)
+            child = crossover(parents[0], parents[1])
             child = mutate(child, beta, mutation_rate=0.1, bounds=bounds)
             new_population.append(child)
         
@@ -57,6 +58,8 @@ def genetic_algorithm(target_function, bounds, population_size, generations, alp
 def plot_history_3d(history, bounds, target_function, best_solution):
     x1 = np.linspace(bounds[0][0], bounds[0][1], 100)
     x2 = np.linspace(bounds[1][0], bounds[1][1], 100)
+    x_opt, y_opt = 0.857, -0.429
+    z_opt = target_function([ x_opt, y_opt])
     X1, X2 = np.meshgrid(x1, x2)
     Z = target_function([X1, X2])
     
@@ -83,7 +86,9 @@ def plot_history_3d(history, bounds, target_function, best_solution):
     
     best_x1, best_x2 = best_solution
     best_z = target_function(best_solution)
+
     ax.scatter(best_x1, best_x2, best_z, color='blue', s=50, label='Лучшее решение', marker='o')
+    ax.scatter(x_opt, y_opt, z_opt, color='green', s=50, label='Целевое решение', marker='o')
     ax.text(best_x1, best_x2, best_z, f'Best', fontsize=10, color='blue', ha='center', va='center', bbox=dict(facecolor='white', edgecolor='blue', pad=1))
 
     plt.legend(loc='upper right')
@@ -92,12 +97,11 @@ def plot_history_3d(history, bounds, target_function, best_solution):
 bounds = [(-2, 2), (-2, 2)]  # Границы для x1 и x2
 population_size = 20  # Количество особей
 generations = 1000  # Количество поколений
-alpha = 0.5  # Параметр кроссовера
 beta = 0.5  # Параметр мутации
 epsilon = 0.01  # Точность решения
 
 
-best_solution, best_value, history = genetic_algorithm(target_function, bounds, population_size, generations, alpha, beta, epsilon)
+best_solution, best_value, history = genetic_algorithm(target_function, bounds, population_size, generations, beta, epsilon)
 
 print("Лучшее решение:", best_solution)
 print("Значение целевой функции:", best_value)
