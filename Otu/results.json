@@ -1,0 +1,50 @@
+{
+  "parameters": {
+    "U_emu": 230,
+    "I_in": 0.01,
+    "r_in": 2100,
+    "L_in": 100,
+    "r1": 3.35,
+    "L1": 0.6,
+    "K_emu": 10.9524,
+    "T_emu": 0.1791,
+    "T_in": 0.0476,
+    "K_oc": 0.12
+  },
+  "transfer_functions": {
+    "W_emu": "<TransferFunction>: sys[0]\nInputs (1): ['u[0]']\nOutputs (1): ['y[0]']\n\n\n           10.95\n---------------------------\n0.008529 s^2 + 0.2267 s + 1\n",
+    "W_motor": "<TransferFunction>: sys[1]\nInputs (1): ['u[0]']\nOutputs (1): ['y[0]']\n\n\n         1.24\n----------------------\n0.0076 s^2 + 0.4 s + 1\n",
+    "W_open": "<TransferFunction>: sys[4]\nInputs (1): ['u[0]']\nOutputs (1): ['y[0]']\n\n\n                          1.63\n--------------------------------------------------------\n6.482e-05 s^4 + 0.005135 s^3 + 0.1068 s^2 + 0.6267 s + 1\n",
+    "W_closed": "<TransferFunction>: sys[6]\nInputs (1): ['u[0]']\nOutputs (1): ['y[0]']\n\n\n                           1.63\n-----------------------------------------------------------\n6.482e-05 s^4 + 0.005135 s^3 + 0.1068 s^2 + 0.6267 s + 2.63\n"
+  },
+  "stability": {
+    "poles": [
+      "(-49.5738943536331+0j)",
+      "(-23.53219330385451+0j)",
+      "(-3.0544123116070674+5.044560107006468j)",
+      "(-3.0544123116070674-5.044560107006468j)"
+    ],
+    "is_stable": true
+  },
+  "frequency_response": {
+    "gain_margin_db": 16.64,
+    "phase_margin_deg": 96.85,
+    "gain_cross_freq": 11.05,
+    "phase_cross_freq": 2.75
+  },
+  "raus_criterion": {
+    "characteristic_polynomial": "13.5809523809524*Koc + 6.466384e-5*s**4 + 0.002907256*s**3 + 0.0477204*s**2 + 0.3658*s + 1.0",
+    "hurwitz_determinant": "4.20967712001363e-5",
+    "limit_Koc": []
+  },
+  "formulas": {
+    "K_emu": "U_emu / (I_in * r_in)",
+    "T_emu": "L1 / r1",
+    "T_in": "L_in / r_in",
+    "W_emu(s)": "K_emu / ((T_emu * s + 1)(T_in * s + 1))",
+    "W_motor(s)": "1.24 / (0.0076*s^2 + 0.14*s + 1)",
+    "W_open(s)": "W_emu(s) * W_motor(s) * K_oc",
+    "W_closed(s)": "W_open(s) / (1 + W_open(s))",
+    "Hurwitz_D": "Определитель 3x3 по первым 4 коэффициентам"
+  }
+}
