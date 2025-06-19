@@ -1,11 +1,10 @@
+from sympy import symbols, Matrix, simplify, solve, expand
 import numpy as np
+from control import tf, feedback, step_response, bode_plot, nyquist_plot, margin, poles
 import matplotlib.pyplot as plt
 import json
-from control import tf, feedback, step_response, bode_plot, nyquist_plot, margin, poles
-from sympy import symbols, Matrix, simplify, solve, expand
-from scipy.signal import freqs
 
-# --- Паспортные данные и расчёт параметров ---
+# --- Исходные параметры ---
 U_эму = 230
 I_вх = 0.01
 r_вх = 2100
@@ -55,7 +54,7 @@ plt.ylabel("Выход")
 plt.grid()
 plt.show()
 
-# --- Критерий Найквиста с полюсами разомкнутой САУ ---
+# --- Критерий Найквиста ---
 полюса_разомк = poles(W_разомкнутая)
 Re_open = [p.real for p in полюса_разомк]
 Im_open = [p.imag for p in полюса_разомк]
@@ -67,17 +66,25 @@ plt.grid()
 plt.legend()
 plt.show()
 
-# --- Частотные характеристики и запасы устойчивости ---
+# --- Частотные характеристики ---
 mag, phase, omega = bode_plot(W_разомкнутая, dB=True, plot=True)
 gm, pm, wg, wp = margin(W_разомкнутая)
 
-# --- Годограф Михайлова (полярный) ---
+# --- Годограф Михайлова (исправленный) ---
 den_mikh = W_замкнутая.den[0][0]
 omega_m = np.logspace(-1, 2, 1000)
-_, H = freqs([1], den_mikh, worN=omega_m)
+H = []
+
+for w in omega_m:
+    jw = 1j * w
+    val = sum(coef * (jw ** i) for i, coef in enumerate(reversed(den_mikh)))
+    H.append(val)
+
+H = np.array(H)
 phi = np.angle(H)
 amp = np.abs(H)
 
+# Полярный график
 plt.figure()
 ax = plt.subplot(1, 1, 1, projection='polar')
 ax.plot(phi, amp, label="Годограф Михайлова")
@@ -86,11 +93,14 @@ ax.grid(True)
 plt.legend()
 plt.show()
 
-x = amp * np.cos(phi)
-y = amp * np.sin(phi)
+# Декартовы координаты
+x = H.real
+y = H.imag
 
 plt.figure()
-plt.plot(x, y, label="Годограф Михайлова (декартовы координаты)")
+plt.plot(x, y, label="Годограф Михайлова (декартовые координаты)")
+plt.axhline(0, color='red', linestyle='--', linewidth=1)
+plt.axvline(0, color='red', linestyle='--', linewidth=1)
 plt.xlabel("Re")
 plt.ylabel("Im")
 plt.title("Годограф Михайлова (декартовые координаты)")
@@ -100,77 +110,47 @@ plt.legend()
 plt.show()
 
 # --- Критерий Рауса-Гурвица ---
-W_база = W_эму * W_двигатель
-num = [K_эму * 1.24]  # = 13.64
+num_raz = np.array(W_разомкнутая.num[0][0])
+den_raz = np.array(W_разомкнутая.den[0][0])
+max_len = max(len(den_raz), len(num_raz))
+num_raz = np.pad(num_raz, (max_len - len(num_raz), 0))
+den_raz = np.pad(den_raz, (max_len - len(den_raz), 0))
 
-num_raz = W_разомкнутая.num[0][0]
-den_raz = W_разомкнутая.den[0][0]
-den = np.polyadd(den_raz, num_raz)
+s, Koc = symbols('s Koc')
+D_poly = sum(den_raz[i] * s**(max_len - 1 - i) for i in range(max_len))
+N_poly = sum(num_raz[i] * s**(max_len - 1 - i) for i in range(max_len))
+char_poly = expand(D_poly + Koc * N_poly)
+coeffs = char_poly.as_poly(s).all_coeffs()
+a0, a1, a2, a3, a4 = coeffs
 
-print("Вычисленные коэффициенты знаменателя замкнутой системы:", den)
-
-s, Kос_симв = symbols('s Kос')
-D_poly = sum(den[i] * s**(len(den) - 1 - i) for i in range(len(den)))
-N_poly = num[0]
-хар_полином = expand(D_poly + Kос_симв * N_poly)
-coeffs = хар_полином.as_poly(s).all_coeffs()
-a0, a1, a2, a3 = coeffs[:4]
 H = Matrix([
     [a1, a3, 0],
-    [a0, a2, 0],
+    [a0, a2, a4],
     [0, a1, a3]
 ])
+
 D = simplify(H.det())
-решения = solve(D, Kос_симв)
+roots = solve(D, Koc)
 
-# --- Запись в JSON ---
-результаты = {
-    "параметры": {
-        "U_эму": U_эму,
-        "I_вх": I_вх,
-        "r_вх": r_вх,
-        "L_вх": L_вх,
-        "r1": r1,
-        "L1": L1,
-        "K_эму": round(K_эму, 4),
-        "T_эму": round(T_эму, 4),
-        "T_вх": round(T_вх, 4),
-        "K_ос": K_ос
-    },
-    "передаточные_функции": {
-        "W_эму": str(W_эму),
-        "W_двигатель": str(W_двигатель),
-        "W_разомкнутая": str(W_разомкнутая),
-        "W_замкнутая": str(W_замкнутая)
-    },
-    "устойчивость": {
-        "полюса": [str(p) for p in полюса],
-        "устойчива": устойчива
-    },
-    "частотные_характеристики": {
-        "запас_по_усилению_dB": round(20 * np.log10(gm), 2) if gm > 0 else None,
-        "запас_по_фазе_град": round(pm, 2),
-        "частота_пересечения_усиления": round(wg, 2),
-        "частота_пересечения_фазы": round(wp, 2)
-    },
-    "раус_гурвиц": {
-        "характеристический_полином": str(хар_полином),
-        "определитель_Гурвица": str(D),
-        "границы_Kос": [str(sol) for sol in решения]
-    },
-    "формулы": {
-        "K_эму": "U_эму / (I_вх * r_вх)",
-        "T_эму": "L1 / r1",
-        "T_вх": "L_вх / r_вх",
-        "W_эму(s)": "K_эму / ((T_эму * s + 1)(T_вх * s + 1))",
-        "W_двигатель(s)": "1.24 / (0.0076*s^2 + 0.4*s + 1)",
-        "W_разомкнутая(s)": "W_эму(s) * W_двигатель(s) * K_ос",
-        "W_замкнутая(s)": "W_разомкнутая(s) / (1 + W_разомкнутая(s))",
-        "Hurwitz_D": "Определитель 3x3 по первым 4 коэффициентам"
-    }
-}
+print("Границы устойчивости Koc:", roots)
 
-with open("результаты.json", "w", encoding="utf-8") as f:
-    json.dump(результаты, f, ensure_ascii=False, indent=2)
+# Проверка корней замкнутой системы при границах
+from sympy import lambdify
 
-print("Данные успешно сохранены в результаты.json (без переходной характеристики)")
+char_poly_func = lambdify((s, Koc), char_poly, 'numpy')
+
+for val in roots:
+    k_val = float(val.evalf())
+    # Подставляем Koc = k_val и получаем численные коэффициенты
+    char_num = []
+    for i in range(len(coeffs)):
+        c = coeffs[i].subs(Koc, k_val)
+        char_num.append(float(c.evalf()))
+    # char_num идут от старшей степени s^4 к младшей s^0
+    char_num = np.array(char_num)
+
+    # Корни полинома
+    roots_poly = np.roots(char_num)
+    print(f"\nПри Koc = {k_val}:")
+    print("Корни характеристического полинома:", roots_poly)
+    print("Действительная часть корней:", roots_poly.real)

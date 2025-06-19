@@ -1,0 +1,171 @@
+import numpy as np
+import control as ct
+import matplotlib.pyplot as plt
+import warnings
+
+warnings.filterwarnings('ignore', category=FutureWarning)
+
+# --- 3. ПОЯСНЕНИЯ К РАБОТЕ ---
+# --- Параметры и передаточные функции ---
+print("--- 1. Создание модели САУ ---")
+K = 70
+W1 = ct.tf([K], [1], name='W1')
+W2 = ct.tf([0.1], [0.001, 1], name='W2')
+W3 = ct.tf([10], [0.04, 1], name='W3')
+W4 = ct.tf([1], [0.004, 0.376], name='W4')
+W5 = ct.tf([0.8], [1], name='W5')
+W6 = ct.tf([1], [0.065, 0], name='W6')
+W7 = ct.tf([0.8], [1], name='W7')
+W8 = ct.tf([0.8], [1], name='W8')
+W9 = ct.tf([0.14], [1], name='W9')
+
+# --- 1. Набрать структурную схему САУ ---
+# Собираем схему по частям, используя алгебру передаточных функций,
+# чтобы избежать проблем с функцией interconnect.
+
+# Шаг 1: Определяем передаточную функцию от напряжения на якоре (Ua) к току якоря (Ia).
+# Внутренний контур ЭДС (Back EMF) является частью двигателя.
+# Прямой путь двигателя: G_motor_fwd = W4 * W5 * W6
+# Передаточная функция от Ua к Ia: G_Ua_to_Ia = W4 / (1 + W4*W5*W6*W7)
+G_motor_fwd = W4 * W5 * W6
+G_Ua_to_Ia = W4 / (1 + G_motor_fwd * W7)
+G_Ua_to_Ia.name = 'G_Ua_to_Ia'
+
+# Шаг 2: Замкнутый контур регулирования тока.
+# Прямой путь: W2 * W3 * G_Ua_to_Ia
+# Обратная связь: W8
+G_current_loop_fwd = W2 * W3 * G_Ua_to_Ia
+G_current_closed = ct.feedback(G_current_loop_fwd, W8, sign=-1)
+G_current_closed.name = 'G_current_closed' # TF от I_ref к Ia
+
+# Шаг 3: Определяем передаточную функцию от тока якоря (Ia) к скорости (ω)
+# Эта связь определяется звеньями W5 и W6.
+G_Ia_to_omega = W5 * W6
+G_Ia_to_omega.name = 'G_Ia_to_omega'
+
+# Шаг 4: Собираем внешний контур регулирования скорости.
+# "Растение" для контура скорости - это замкнутый контур тока, за которым следует преобразование тока в скорость.
+G_speed_plant = G_current_closed * G_Ia_to_omega
+G_speed_plant.name = 'G_speed_plant'
+
+# Прямой путь контура скорости
+G_speed_fwd = W1 * G_speed_plant
+
+# Замыкаем главный контур с датчиком скорости W9
+G_closed = ct.feedback(G_speed_fwd, W9, sign=-1)
+G_closed = G_closed.minreal()
+
+# --- 2. В режиме «Анализ» определить прямые оценки качества ---
+print("\n--- 2. Прямые оценки качества переходного процесса ---")
+t = np.linspace(0, 1.0, 5000)
+t, y = ct.step_response(G_closed, T=t)
+
+# Расчет показателей качества
+h_y = y[-1]
+
+# Ручной расчет времени регулирования (t_рег) для 5% допуска,
+# так как аргумент 'settledown' может не поддерживаться.
+tolerance = 0.05
+upper_bound = h_y * (1 + tolerance)
+lower_bound = h_y * (1 - tolerance)
+# Ищем время, начиная с которого кривая не выходит за пределы 5% зоны
+t_reg_5_percent = t[-1] # По умолчанию - конечное время
+for i in range(len(t) - 1, 0, -1):
+    if not (lower_bound <= y[i] <= upper_bound):
+        # Нашли последнюю точку вне зоны. Время регулирования - это следующий момент времени.
+        t_reg_5_percent = t[i + 1] if i + 1 < len(t) else t[-1]
+        break
+else:
+    # Если весь график (после t=0) внутри зоны, t_рег - время входа в зону
+    entry_index = np.where(y >= lower_bound)[0][0]
+    t_reg_5_percent = t[entry_index]
+
+h_m = np.max(y)
+t_m_val = t[np.argmax(y)]
+overshoot = (h_m - h_y) / h_y * 100 if h_y != 0 else 0
+# t_n - время первого пересечения установившегося значения
+t_n_val = t[np.where(y >= h_y)[0][0]]
+
+print(f"2.1.1. Время регулирования (t_рег) по 5% допуску: {t_reg_5_percent:.4f} с")
+print(f"2.1.2. Перерегулирование (H_m): {overshoot:.2f} %")
+print(f"       - Установившееся значение (h_y): {h_y:.4f}")
+print(f"       - Максимальное значение (h_m): {h_m:.4f}")
+print(f"2.1.3. Время достижения первого максимума (t_m): {t_m_val:.4f} с")
+print(f"2.1.4. Время нарастания (t_н): {t_n_val:.4f} с")
+
+from scipy.signal import find_peaks
+peaks, _ = find_peaks(y)
+if len(peaks) > 1:
+    T0 = t[peaks[1]] - t[peaks[0]]
+    omega_osc = 2 * np.pi / T0
+    print(f"2.1.5. Период колебаний (T_0): {T0:.4f} с")
+    print(f"       - Частота колебаний (ω): {omega_osc:.4f} рад/с")
+else:
+    print("2.1.5. Недостаточно колебаний для определения периода.")
+
+y_err = y - h_y
+zero_crossings = np.where(np.diff(np.sign(y_err)))[0]
+n_oscillations = len([zc for zc in zero_crossings if t[zc] < t_reg_5_percent]) / 2
+print(f"2.1.6. Число колебаний (N) за время регулирования: {n_oscillations:.1f}")
+
+# Построение графика переходного процесса
+plt.figure(figsize=(12, 7))
+plt.plot(t, y, label='Переходная характеристика h(t)')
+plt.axhline(y=h_y, color='r', linestyle='--', label=f'Установившееся значение = {h_y:.3f}')
+plt.axhline(y=h_y * 1.05, color='g', linestyle=':', label='5% зона допуска')
+plt.axhline(y=h_y * 0.95, color='g', linestyle=':')
+plt.axvline(t_n_val, color='blue', linestyle=':', label=f'Время нарастания = {t_n_val:.3f} с')
+plt.axvline(x=t_reg_5_percent, color='orange', linestyle='--', label=f'Время регулирования = {t_reg_5_percent:.3f} с')
+plt.plot(t_m_val, h_m, 'o', markersize=8, label=f'Перерегулирование = {overshoot:.1f}%')
+plt.title('Переходная характеристика замкнутой САУ')
+plt.xlabel('Время (с)')
+plt.ylabel('Выходной сигнал ω(t)')
+plt.grid(True)
+plt.legend()
+plt.savefig('step_response.png')
+print("\nГрафик переходной характеристики сохранен в файл 'step_response.png'")
+
+# --- 3. По распределению нулей и полюсов определить... ---
+print("\n--- 3. Корневые оценки качества ---")
+poles = G_closed.poles()
+print(f"Полюсы замкнутой системы: {poles}")
+
+alpha_min = -np.max(np.real(poles))
+t_reg_approx = 3 / alpha_min
+print(f"Степень устойчивости (α_min): {alpha_min:.4f}")
+print(f"Приближенное время переходного процесса (t_рег ≈ 3/α_min): {t_reg_approx:.4f} с")
+
+complex_poles = [p for p in poles if np.imag(p) != 0]
+if complex_poles:
+    mu_values = [abs(np.imag(p) / np.real(p)) for p in complex_poles]
+    mu = np.max(mu_values)
+    print(f"Колебательность системы (μ = max|ω/α|): {mu:.4f}")
+else:
+    print("Комплексные полюсы отсутствуют, система не является колебательной.")
+
+# Карта нулей и полюсов
+plt.figure(figsize=(8, 8))
+ct.pzmap(G_closed, plot=True, title='Карта нулей и полюсов замкнутой системы')
+plt.grid(True)
+plt.savefig('pzmap.png')
+print("Карта нулей и полюсов сохранена в файл 'pzmap.png'")
+
+# --- 4. Разомкнуть структурную схему и определить... ---
+print("\n--- 4. Частотные оценки качества (запасы устойчивости) ---")
+# Передаточная функция разомкнутого главного контура - это G_speed_fwd * W9
+G_open_loop_sys = G_speed_fwd * W9
+G_open_loop_sys = G_open_loop_sys.minreal()
+
+# Расчет запасов устойчивости
+gm, pm, _, _ = ct.margin(G_open_loop_sys)
+gain_margin_dB = 20 * np.log10(gm)
+
+print(f"Запас устойчивости по модулю (ΔL): {gain_margin_dB:.2f} дБ")
+print(f"Запас устойчивости по фазе (Δφ): {pm:.2f} град.")
+
+# Построение диаграмм Боде
+plt.figure(figsize=(12, 8))
+ct.bode_plot(G_open_loop_sys, display_margins=True, dB=True, Hz=False)
+plt.suptitle('ЛАЧХ и ЛФЧХ разомкнутой САУ', y=0.98)
+plt.savefig('bode_plot.png')
+print("Диаграммы Боде сохранены в файл 'bode_plot.png'")

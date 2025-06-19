@@ -1,0 +1,12 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "database": "C:\\SQLite\\agency.db",
+            "name": "Kolpachkov",
+            "group": "agency"
+        }
+    ],
+    "sqltools.useNodeRuntime": true
+}

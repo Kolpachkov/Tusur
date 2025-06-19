@@ -10,7 +10,7 @@ image_size = 32      # Размер изображения (ширина=выс�
 color_depth = 3       # Глубина цвета (3 = RGB, 1 = grayscale)
 noise_dim = 100
 batch_size = 256
-epochs = 5000
+epochs = 1000
 BUFFER_SIZE = 10000
 
 # Загрузка и подготовка данных
@@ -138,8 +138,12 @@ def train(dataset, epochs):
             disc_loss_avg.update_state(disc_loss)
 
         print(f"Epoch {epoch+1}/{epochs}, Generator loss: {gen_loss_avg.result():.4f}, Discriminator loss: {disc_loss_avg.result():.4f}")
+        
+        # Сохраняем изображение каждые 100 эпох
+        if (epoch + 1) % 100 == 0:
+            generate_and_save_images(generator, epoch + 1, seed)
 
-    # Сохраняем изображение только после последней эпохи
+    # Сохраняем изображение после последней эпохи
     generate_and_save_images(generator, epochs, seed)
 
 # Запуск обучения
